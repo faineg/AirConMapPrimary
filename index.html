@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+		
+		
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"
+     integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+     crossorigin="">
+		
+		
+        <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <style>
+		
+		
+				html, body {
+			height: 100%;
+			margin: 0;
+		}
+		
+        #map {
+            width: 994px;
+            height: 635px;
+			position: absolute; top:0; bottom:0; right:0; left:0; 
+        }
+		
+		#map-title { position: relative; margin-top: 10px; margin-left: 50px; float: left;     background: white;
+    background: rgba(255,255,255,0.8) ;   box-shadow: 0 0 15px rgba(0,0,0,0.2); border: 2px solid rgba(0,0,0,0.2); border-radius: 5px; padding: 6px 8px;   font: 20px/20px Arial, Helvetica, sans-serif; font-weight: bold; z-index: 800; }
+		
+        </style>
+		
+		<style>#map { width: 800px; height: 500px; }
+		
+.info { text-align: right; width: 200px; padding: 6px 8px; font: 14px/16px Arial, Helvetica, word-wrap: normal; sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+
+.legend { text-align: left; line-height: 18px; color: #555; } .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }</style>
+
+        <title>air conditioning</title>
+    </head>
+    <body>
+	<div id="map-title">Air Conditioning in the USA</div>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+		
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"
+     integrity="sha512-QVftwZFqvtRNi0ZyCtsznlKSWOStnDORoefr1enyq5mVL4tmKB3S/EnC3rRJcxCPavG10IcrVGSmPh6Qw5lwrg=="
+     crossorigin=""></script>
+		
+		
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="data/divisions_ac_percentages_1.js"></script>
+        <script src="data/citydots_joined_AC_4326_2.js"></script>
+		<script src="https://unpkg.com/leaflet.minichart/dist/leaflet.minichart.min.js" charset="utf-8"></script>
+        <script>
+
+		
+        var map = L.map('map', {
+            zoomControl: true, maxZoom:28, minZoom:1
+        }).fitBounds([[13.664312782584766,-116.80293694491303],[53.747463402468945,-53.98700421991287]]);
+		
+		  var regionLayer;
+		  var cityLayer;
+		
+			// control that shows state info on hover
+	var info = L.control();
+
+	info.onAdd = function (map) {
+		this._div = L.DomUtil.create('div', 'info');
+		this.update();
+		return this._div;
+	};
+
+	info.update = function (props) {
+		this._div.innerHTML = '<h4>Regional AC 2019</h4>' +  (props ?
+			'<b>' + props.NAME + '</b><br />' + props.With_PrimaryAC + ' with primary AC.' + '</b><br />' + props.Central_AC + ' with central AC.' + '</b><br />' + props.Room_AC + ' with room AC.' 
+			: 'Hover over a census region to view 2019 home AC data. Click on a city to view urban AC use with 2015 data.');
+	};
+	
+	
+
+	info.addTo(map);
+
+	function highlightFeature(e) {
+		var layer = e.target;
+
+		layer.setStyle({
+			weight: 5,
+			color: '#666',
+			dashArray: '',
+			fillOpacity: 0.7
+		});
+
+		if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+			layer.bringToFront();
+		}
+
+		info.update(layer.feature.properties);
+	}
+	
+	
+	var layer_divisions_ac_percentages_1;
+
+	function resetHighlight(e) {
+		layer_divisions_ac_percentages_1.resetStyle(e.target);
+		info.update();
+	}
+
+	function zoomToFeature(e) {
+		map.fitBounds(e.target.getBounds());
+	}
+
+	function onEachFeature(feature, layer) {
+		layer.on({
+			mouseover: highlightFeature,
+			mouseout: resetHighlight,
+			click: zoomToFeature
+		});
+	}
+	
+	
+	//mouse over cities function 
+	
+	
+	
+
+
+		
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_OpenStreetMapStandard_0');
+        map.getPane('pane_OpenStreetMapStandard_0').style.zIndex = 400;
+        var layer_OpenStreetMapStandard_0 = L.tileLayer('http://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OpenStreetMapStandard_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OpenStreetMapStandard_0;
+        map.addLayer(layer_OpenStreetMapStandard_0);
+        function pop_divisions_ac_percentages_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Division Name</th>\
+                        <td>' + (feature.properties['NAME'] !== null ? autolinker.link(feature.properties['NAME'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Primary AC</th>\
+                        <td>' + (feature.properties['With_PrimaryAC'] !== null ? autolinker.link(feature.properties['With_PrimaryAC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Central AC</th>\
+                        <td>' + (feature.properties['Central_AC'] !== null ? autolinker.link(feature.properties['Central_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Room AC</th>\
+                        <td>' + (feature.properties['Room_AC'] !== null ? autolinker.link(feature.properties['Room_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">1 AC Unit</th>\
+                        <td>' + (feature.properties['Unit_1_AC'] !== null ? autolinker.link(feature.properties['Unit_1_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_divisions_ac_percentages_1_0(feature) {
+            switch(String(feature.properties['With_PrimaryAC'])) {
+                case '71.0%':
+                    return {
+                pane: 'pane_divisions_ac_percentages_1',
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(103,0,13,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '87.0%':
+                    return {
+                pane: 'pane_divisions_ac_percentages_1',
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(186,20,25,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '91.0%':
+                    return {
+                pane: 'pane_divisions_ac_percentages_1',
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(235,54,42,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '94.0%':
+                    return {
+                pane: 'pane_divisions_ac_percentages_1',
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,112,80,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '98.0%':
+                    return {
+                pane: 'pane_divisions_ac_percentages_1',
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,164,135,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '99.0%':
+                    return {
+                pane: 'pane_divisions_ac_percentages_1',
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(254,214,196,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_divisions_ac_percentages_1',
+                opacity: 1,
+                color: 'rgba(255,255,255,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,245,240,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_divisions_ac_percentages_1');
+        map.getPane('pane_divisions_ac_percentages_1').style.zIndex = 401;
+        map.getPane('pane_divisions_ac_percentages_1').style['mix-blend-mode'] = 'normal';
+        var layer_divisions_ac_percentages_1 = new L.geoJson(json_divisions_ac_percentages_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_divisions_ac_percentages_1',
+            layerName: 'layer_divisions_ac_percentages_1',
+            pane: 'pane_divisions_ac_percentages_1',
+            onEachFeature:  onEachFeature,
+            style: style_divisions_ac_percentages_1_0,
+        });
+        bounds_group.addLayer(layer_divisions_ac_percentages_1);
+		
+        map.addLayer(layer_divisions_ac_percentages_1);
+		
+		//Create city popup 
+		
+		
+        function pop_citydots_joined_AC_4326_2(feature, layer) {
+		
+		
+	
+	
+		function onEachFeatureCity(feature, layer) {
+		layer.on({
+			mouseover: highlightFeature,
+			mouseout: resetHighlight,
+			click: zoomToFeature
+		});
+	};
+	
+			function resetHighlightCity(e) {
+		citydots_joined_AC_4326_2.resetStyle(e.target);
+		info.update2();
+	};
+		
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">City Name</th>\
+                        <td>' + (feature.properties['NAME'] !== null ? autolinker.link(feature.properties['NAME'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Primary AC</th>\
+                        <td>' + (feature.properties['Primary_AC'] !== null ? autolinker.link(feature.properties['Primary_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Central AC</th>\
+                        <td>' + (feature.properties['Central_AC'] !== null ? autolinker.link(feature.properties['Central_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Room AC</th>\
+                        <td>' + (feature.properties['Room_AC'] !== null ? autolinker.link(feature.properties['Room_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">1 Room With AC</th>\
+                        <td>' + (feature.properties['1_Room_AC'] !== null ? autolinker.link(feature.properties['1_Room_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">No AC</th>\
+                        <td>' + (feature.properties['No_AC'] !== null ? autolinker.link(feature.properties['No_AC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_citydots_joined_AC_4326_2_0(feature) {
+            switch(String(feature.properties['Primary_AC'])) {
+                case '34.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(103,0,13,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '36.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(169,15,21,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '73.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(204,24,29,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '90.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(235,54,42,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '92.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(248,93,66,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '93.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,129,97,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '94.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,164,135,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '97.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(253,198,175,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '99.0%':
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,227,215,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_citydots_joined_AC_4326_2',
+                radius: 7.6,
+                opacity: 1,
+                color: 'rgba(106,106,106,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,245,240,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_citydots_joined_AC_4326_2');
+        map.getPane('pane_citydots_joined_AC_4326_2').style.zIndex = 402;
+        map.getPane('pane_citydots_joined_AC_4326_2').style['mix-blend-mode'] = 'normal';
+		
+        var layer_citydots_joined_AC_4326_2 = new L.geoJson(json_citydots_joined_AC_4326_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_citydots_joined_AC_4326_2',
+            layerName: 'layer_citydots_joined_AC_4326_2',
+            pane: 'pane_citydots_joined_AC_4326_2',
+            onEachFeature: pop_citydots_joined_AC_4326_2,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_citydots_joined_AC_4326_2_0(feature));
+            },
+        });
+		
+						
+        bounds_group.addLayer(layer_citydots_joined_AC_4326_2);
+        map.addLayer(layer_citydots_joined_AC_4326_2);
+		
+        var baseMaps = {};
+        L.control.layers(baseMaps,{'15 Biggest US Metros 2015<br /><table><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_3400.png" /></td><td>34.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_3601.png" /></td><td>36.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_7302.png" /></td><td>73.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_9003.png" /></td><td>90.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_9204.png" /></td><td>92.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_9305.png" /></td><td>93.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_9406.png" /></td><td>94.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_9707.png" /></td><td>97.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_9908.png" /></td><td>99.0%</td></tr><tr><td style="text-align: center;"><img src="legend/citydots_joined_AC_4326_2_9.png" /></td><td></td></tr></table>': layer_citydots_joined_AC_4326_2,'Census Areas 2019<br /><table><tr><td style="text-align: center;"><img src="legend/divisions_ac_percentages_1_7100.png" /></td><td>71.0%</td></tr><tr><td style="text-align: center;"><img src="legend/divisions_ac_percentages_1_8701.png" /></td><td>87.0%</td></tr><tr><td style="text-align: center;"><img src="legend/divisions_ac_percentages_1_9102.png" /></td><td>91.0%</td></tr><tr><td style="text-align: center;"><img src="legend/divisions_ac_percentages_1_9403.png" /></td><td>94.0%</td></tr><tr><td style="text-align: center;"><img src="legend/divisions_ac_percentages_1_9804.png" /></td><td>98.0%</td></tr><tr><td style="text-align: center;"><img src="legend/divisions_ac_percentages_1_9905.png" /></td><td>99.0%</td></tr><tr><td style="text-align: center;"><img src="legend/divisions_ac_percentages_1_6.png" /></td><td></td></tr></table>': layer_divisions_ac_percentages_1,"OpenStreetMap Standard": layer_OpenStreetMapStandard_0,}).addTo(map);
+        setBounds();
+        var i = 0;
+        layer_citydots_joined_AC_4326_2.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['NAME'] !== null?String('<div style="color: #000000; font-size: 10pt; font-family: \'Gadugi\', sans-serif;">' + layer.feature.properties['NAME']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_citydots_joined_AC_4326_2'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        resetLabels([layer_divisions_ac_percentages_1,layer_citydots_joined_AC_4326_2]);
+        map.on("zoomend", function(){
+            resetLabels([layer_divisions_ac_percentages_1,layer_citydots_joined_AC_4326_2]);
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer_divisions_ac_percentages_1,layer_citydots_joined_AC_4326_2]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer_divisions_ac_percentages_1,layer_citydots_joined_AC_4326_2]);
+        });
+		
+
+
+        </script>
+    </body>
+</html>

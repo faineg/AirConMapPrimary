@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+  <html>
+    <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+      <title>US Air Conditioning Map.</title>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.2.0/leaflet.css" type="text/css" crossorigin="">
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.2.0/leaflet.js" crossorigin=""></script>
+      <script src="city_airconditioning_primary.js"></script>
+      <script src="regions_AC_primary.js"></script>
+      <link rel="stylesheet" href="style.css" type="text/css">
+	  
+	  <style>
+		html, body {
+			height: 100%;
+			margin: 600;
+		}
+		#map {
+			width: 600px;
+			height: 400px;
+		}
+		
+	body {
+  font-family: Garamond, serif;
+}
+
+	</style>
+       
+	   	<style>#map { width: 800px; height: 500px; }
+.info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+.legend { text-align: left; line-height: 18px; color: #555; } .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }</style>
+
+        <script type="text/javascript">
+          var map;
+
+          function init() {
+          // create map and set center and zoom level
+          map = new L.map('map');
+      map.setView([42.361145, -71.057083],10);
+
+            // create and add the tile layer
+          var tiles = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+	maxZoom: 19,
+	attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
+});
+
+          tiles.addTo(map);
+
+          var cityPrimaryAirCon;
+          var regionPrimaryAirCon;
+
+          var selection;
+          var selectedLayer;
+		  
+		  // control that shows state info on hover
+	var info = L.control();
+	
+	info.onAdd = function (map) {
+		this._div = L.DomUtil.create('div', 'info');
+		this.update();
+		return this._div;
+	};
+
+	info.update = function (props) {
+		this._div.innerHTML = '<h4>Air Conditioning Statistics</h4>' +  (props ?
+			'<b>' + props.NAME + '</b><br />' + props.With_PrimaryAC + ' foot ceiling / mi<sup>2</sup>'
+			: 'Hover over the grid');
+	};
+
+	info.addTo(map);
+	
+	// define the styles for the facility map layer (unselected and selected)
+		   
+		   function getColor(d) {
+    return  d > 100% ? '#fff7ec' :
+	        d > 90% ? '#fee8c8' :
+           d > 80%  ? '#fdd49e' :
+           d > 70%  ? '#fdbb84' :
+          d > 60% ? '#fc8d59' :
+           d > 50%   ? '#ef6548' :
+           d > 40%   ? '#d7301f' :
+           d > 30%   ? '#b30000' :
+                      '#7f0000';
+}
+
+function facilitymapStyle(feature) {
+    return {
+        fillColor: getColor(feature.properties.With_PrimaryAC),
+        weight: 2,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+    };
+}
+	
+	//highlight feature function
+	
+	function highlightFeature(e) {
+		var layer = e.target;
+
+		layer.setStyle({
+			weight: 5,
+			color: '#666',
+			dashArray: '',
+			fillOpacity: 0.7
+		});
+
+		if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+			layer.bringToFront();
+		}
+
+		info.update(layer.feature.properties);
+	}
+	
+	
+	var geojson;
+
+	function resetHighlight(e) {
+		geojson.resetStyle(e.target);
+		info.update();
+	}
+
+	function zoomToFeature(e) {
+		map.fitBounds(e.target.getBounds());
+	}
+
+	function onEachFeature(feature, layer) {
+		layer.on({
+			mouseover: highlightFeature,
+			mouseout: resetHighlight,
+			
+		});
+	}
+
+	geojson = L.geoJson(RegionAirConPrimary, {
+		style: facilitymapStyle,
+		onEachFeature: onEachFeature
+	}).addTo(map);
+
+	map.attributionControl.addAttribution('LAANC data from FAA');
+
+
+	var legend = L.control({position: 'bottomright'});
+
+	legend.onAdd = function (map) {
+
+		var div = L.DomUtil.create('div', 'info legend'),
+			grades = [0, 50, 100, 150, 200, 300, 400],
+			labels = [],
+			from, to;
+
+		for (var i = 0; i < grades.length; i++) {
+			from = grades[i];
+			to = grades[i + 1];
+
+			labels.push(
+				'<i style="background:' + getColor(from + 1) + '"></i> ' +
+				from + (to ? '&ndash;' + to : '+'));
+		}
+
+		div.innerHTML = labels.join('<br>');
+		return div;
+	};
+
+	legend.addTo(map);
+	
+		  
+		  //FACILITY MAPS
+		  
+	
+
+
+          /* function facilitymapStyle(feature) {
+            return {
+               fillColor: "#FF00FF",
+               fillOpacity: 1,
+               color: '#B04173',
+            };
+          } 
+
+          function facilitymapSelectedStyle(feature) {
+             return {
+               fillColor: "#00FFFB",
+               color: '#0000FF',
+               fillOpacity: 1
+            };
+          }
+*/
+
+   
+
+		  	
+
+
+              
+		  
+		  
+       
+
+//Cities
+
+          // create icons for cities  (selected and unselected)
+       var geojsonMarkerOptions = {
+    radius: 8,
+    fillColor: "#ff7800",
+    color: "#000",
+    weight: 1,
+    opacity: 1,
+    fillOpacity: 0.8
+};
+
+
+          // handle click events on city features and add popup
+		  
+          function airportOnEachFeature(feature, layer){
+            layer.on({
+              click: function(e) {
+                  if (selection) {
+                    resetStyles();
+                  }
+                 
+                  selection = e.target;
+                  selectedLayer = airportLayer;
+                  
+                console.log(feature.properties);
+        content = "<b>Airport Name:</b> " + feature.properties.NAME + "<br><b>Facility Type:</b> " + feature.properties.Primary_AC + "<br><b>Service Level:</b> " + feature.properties.Central_AC;
+        layer.bindPopup(content);
+
+                  L.DomEvent.stopPropagation(e); // stop click event from being propagated further
+                }
+            });
+          }
+
+          
+          
+          // add the airports GeoJSON layer using the airport variable 
+		  
+                airportLayer = new L.geoJSON(CityAirconPrimary,{
+                     pointToLayer: function (feature, latlng) {
+                      return L.circleMarker(latlng, geojsonMarkerOptions);
+                     },
+                     onEachFeature: airportOnEachFeature
+                   }
+                );    
+               
+               airportLayer.addTo(map);
+
+
+          // handle clicks on the map that didn't hit a feature
+		  
+          map.addEventListener('click', function(e) {
+            if (selection) {
+              resetStyles();
+              selection = null;
+              document.getElementById('summaryLabel').innerHTML = '<p>Click a garden or food pantry on the map to get more information.</p>';
+            }
+          });
+          
+          // function to set the old selected feature back to its original symbol. Used when the map or a feature is clicked.
+		  
+          function resetStyles(){
+            if (selectedLayer === airportLayer) selection.setIcon(geojsonMarkerOptions);
+			else if (selectedLayer === facilityLayer) selectedLayer.resetStyle(selection);
+            else if (selectedLayer === militarybasesLayer) selectedLayer.resetStyle(selection);
+          }
+          
+          // function to build the HTML for the summary label using the AIRPORT_NA property
+		  
+          function buildSummaryLabel(currentFeature){
+            var featureName = currentFeature.properties.NAME || "Unnamed feature";
+            document.getElementById('summaryLabel').innerHTML = '<p style="font-size:18px"><b>' + featureName + '</b></p>';
+          }
+		  
+		   // function to build the HTML for the summary label using the military base site_name property
+		   
+          function buildSummaryLabelBase(currentFeature){
+            var featureName = currentFeature.properties.site_name || "Unnamed feature";
+            document.getElementById('summaryLabel').innerHTML = '<p style="font-size:18px"><b>' + featureName + '</b></p>';
+          }
+          
+		  
+		  // function to build the HTML for the summary label using the facility map properties
+		   
+          function buildSummaryLabelFacility(currentFeature){
+            var featureName = currentFeature.properties.NAME|| "Unnamed feature";
+            document.getElementById('summaryLabel').innerHTML = '<p style="font-size:18px"><b>' + featureName + '</b></p>';
+          }
+		  
+		
+          
+          
+        }
+            
+        </script>
+      </head>
+      <body onload="init()">
+        <h1 id="title">US Air Conditioning Map.</h1>
+        <div id="map"></div>
+        <div id="summaryLabel">
+            <p>Click a feature to get more information.</p>
+        </div>
+      </body>
+    </html>
